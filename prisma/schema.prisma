@@ -1,0 +1,247 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Customer information model
+model Customer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Personal Information
+  firstName   String
+  lastName    String
+  email       String   @unique
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+
+  // Financial Information
+  income            Int?
+  creditScore       Int?
+  downPayment       Decimal?
+  monthlyBudget     Decimal?
+  employmentStatus  String?
+  employmentYears   Int?
+
+  // Current Vehicle
+  currentVehicle    String?
+  tradeInValue      Decimal?
+  tradeInPayoff     Decimal?
+
+  // Preferences
+  vehiclePreferences String?
+  notes             String?
+
+  // Relationships
+  quotes            Quote[]
+  lenderApplications LenderApplication[]
+
+  @@map("customers")
+}
+
+// Lender information and requirements
+model Lender {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Basic Information
+  name            String   @unique
+  type            String   // Bank, Credit Union, Captive, etc.
+  isActive        Boolean  @default(true)
+
+  // Credit Requirements
+  minCreditScore  Int?
+  maxCreditScore  Int?
+  minIncome       Int?
+
+  // Loan Terms
+  minLoanAmount   Decimal?
+  maxLoanAmount   Decimal?
+  minTerm         Int?     // months
+  maxTerm         Int?     // months
+  maxLTV          Decimal? // Loan to Value ratio
+  maxPTI          Decimal? // Payment to Income ratio
+
+  // Vehicle Requirements
+  maxVehicleAge   Int?     // years
+  maxMileage      Int?
+  minVehicleValue Decimal?
+
+  // Fees and Rates
+  acquisitionFee  Decimal?
+  baseRate        Decimal?
+  rateMarkup      Decimal?
+
+  // Programs and Tiers
+  programs        LenderProgram[]
+  applications    LenderApplication[]
+
+  @@map("lenders")
+}
+
+// Lender programs (subprime, prime, etc.)
+model LenderProgram {
+  id        String   @id @default(cuid())
+  lenderId  String
+  lender    Lender   @relation(fields: [lenderId], references: [id], onDelete: Cascade)
+
+  name            String
+  tier            String?  // None, Tier 0-9, Subprime, etc.
+  ficoRange       String?  // "640-680"
+  maxLTV          Decimal?
+  maxTerm         Int?
+  vehicleAge      String?  // "New & Used", "2013+ models", etc.
+  minStoreReq     Decimal? // Minimum store requirement
+  
+  isActive        Boolean  @default(true)
+
+  @@map("lender_programs")
+}
+
+// Vehicle inventory model
+model Vehicle {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Vehicle Identification
+  stockNumber   String   @unique
+  vin           String?  @unique
+  year          Int
+  make          String
+  model         String
+  trim          String?
+  mileage       Int?
+
+  // Pricing
+  invoiceCost   Decimal?
+  retailValue   Decimal?
+  salePrice     Decimal
+  bookValue     Decimal?
+
+  // Vehicle Details
+  bodyStyle     String?
+  transmission  String?
+  drivetrain    String?
+  fuelType      String?
+  exteriorColor String?
+  interiorColor String?
+  features      String[]
+
+  // Status
+  status        String   @default("available") // available, sold, pending
+  location      String?
+
+  // Relationships
+  quotes        Quote[]
+
+  @@map("vehicles")
+}
+
+// Quote/Deal model
+model Quote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // References
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicleId  String
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  // Financial Details
+  vehiclePrice    Decimal
+  tradeValue      Decimal?
+  downPayment     Decimal?
+  amountFinanced  Decimal
+  interestRate    Decimal?
+  termMonths      Int?
+  monthlyPayment  Decimal?
+
+  // Fees
+  salesTax        Decimal?
+  registrationFee Decimal?
+  documentFee     Decimal?
+  warrantyPrice   Decimal?
+  otherFees       Decimal?
+
+  // Total Deal
+  totalPrice      Decimal
+  totalCash       Decimal?
+
+  // Status
+  status          String   @default("draft") // draft, presented, approved, funded
+
+  // AI Analysis
+  aiRecommendation String?
+  confidenceScore  Decimal?
+
+  @@map("quotes")
+}
+
+// Lender application tracking
+model LenderApplication {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // References
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lenderId   String
+  lender     Lender   @relation(fields: [lenderId], references: [id], onDelete: Cascade)
+
+  // Application Details
+  applicationId   String?  // External lender application ID
+  requestedAmount Decimal
+  requestedTerm   Int
+  submittedAt     DateTime?
+
+  // Response
+  status          String   // pending, approved, declined, counter
+  approvedAmount  Decimal?
+  approvedRate    Decimal?
+  approvedTerm    Int?
+  declineReason   String?
+
+  // Terms
+  buyRate         Decimal?
+  sellRate        Decimal?
+  reserveSpread   Decimal?
+
+  @@map("lender_applications")
+}
+
+// AI Analysis and Recommendations
+model AIAnalysis {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Analysis Type
+  type          String   // customer_profile, lender_match, vehicle_recommendation
+  entityId      String   // ID of customer, quote, etc.
+  
+  // Analysis Results
+  analysis      Json
+  confidence    Decimal?
+  recommendations Json?
+
+  // Model Information
+  modelUsed     String?
+  processingTime Int?   // milliseconds
+
+  @@map("ai_analyses")
+}
