@@ -80,12 +80,20 @@ export default function Home() {
           <p className="text-lg mb-6">
             Replace manual processes with AI-powered automation and save $140,000+ annually
           </p>
-          <Link
-            href="/dashboard"
-            className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-          >
-            Launch Dashboard
-          </Link>
+          <div className="space-x-4">
+            <Link
+              href="/dashboard"
+              className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+            >
+              Launch Dashboard
+            </Link>
+            <Link
+              href="/lenders"
+              className="bg-blue-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-900 transition-colors"
+            >
+              Try Lender Matcher
+            </Link>
+          </div>
         </div>
       </div>
     </main>
